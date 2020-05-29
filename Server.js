@@ -17,11 +17,11 @@ type Query{
     text:String
     Registered_Users: [User!]!
     Registered_Drivers: [Driver!]!
-    Registered_Admins : [Administrator!]!
+    Registered_Admins : [Admin!]!
     Requested_Deliveries : [Deliveries]
     Find_Driver(username:String!): Driver
     Find_User(username:String!): User
-    Find_Admin(username:String!): Administrator
+    Find_Admin(username:String!): Admin
     Free_Drivers:[Driver]
     Find_Delivery(name:String!): [Deliveries]
     No_Driver_Assigned_Delivery:[Deliveries]
@@ -44,6 +44,14 @@ type Driver{
     Name:String
     Username:String
     On_Delivery:Boolean
+    Password:String
+    createdAt:Date
+    updatedAt:Date
+}
+type Admin{
+    _id:ID
+    Name:String
+    Username:String
     Password:String
     createdAt:Date
     updatedAt:Date
