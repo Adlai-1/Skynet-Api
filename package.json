@@ -1,0 +1,27 @@
+{
+  "name": "skynet",
+  "version": "1.0.0",
+  "description": "service Api",
+  "main": "server.js",
+  "engines": {
+    "node": "12.15.0",
+    "npm": "6.13.4"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "Skynet"
+  ],
+  "author": "David Adlai Nettey",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^4.0.1",
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
+    "express-graphql": "^0.9.0",
+    "graphql": "^15.0.0",
+    "graphql-iso-date": "^3.6.1",
+    "mongoose": "^5.9.11"
+  }
+}
