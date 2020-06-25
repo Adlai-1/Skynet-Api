@@ -203,7 +203,10 @@ Mutation:{
 const server = new ApolloServer({
     typeDefs:Schema,
     resolvers:root,
-    playground:true
+    playground:true,
+    engine:{
+        reportSchema:true
+    }
 })
 
 
