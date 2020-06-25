@@ -1,41 +1,44 @@
 const express = require('express')
 const app = express()
 const brc = require('bcrypt')
-const graph = require('graphql')
 const body = require('body-parser')
-const exgraph = require('express-graphql')
 const {User_Model} = require('./Models/Users')
 const {Admin_Model} = require('./Models/Admins')
 const {Driver_Model} = require('./Models/Driver')
 const {Delivery_Model} = require('./Models/Deliveries')
+const {gql,ApolloServer}  = require('apollo-server-express')
 
+//Salt Generation...
+const Salt = brc.genSalt(10)
 
-const Schema = graph.buildSchema(`
+app.use(body.json())
+const Schema = gql`
 
 scalar Date
 type Query{
     text:String
-    Registered_Users: [User!]!
-    Registered_Drivers: [Driver!]!
-    Registered_Admins : [Admin!]!
-    Requested_Deliveries : [Deliveries]
-    Find_Driver(username:String!): Driver
-    Find_User(username:String!): User
-    Find_Admin(username:String!): Admin
-    Free_Drivers:[Driver]
-    Find_Delivery(name:String!): [Deliveries]
-    No_Driver_Assigned_Delivery:[Deliveries]
+    Users: [User!]!
+    Drivers: [Driver!]!
+    Admins : [Admin!]!
+    Deliveries : [Deliveries]
+    Driver(username:String!): Driver
+    User(username:String!): User
+    Admin(username:String!): Admin
+    Available_Drivers:[Driver]
+    Find_Delivery(username:String!): [Deliveries]
+    Available_Delivery:[Deliveries]
+    Customer_Records(username:String!):[Deliveries]
+    Driver_Records(username:String):[Deliveries]
 }
+
 type User{
     _id:ID!
     Name : String!
-    Email_Address: String!
+    Email: String!
     Contact: String!
     Username:String!
     Password:String!
     Address:String!
-    City:String!
-    Region:String!
     createdAt:Date
     updatedAt:Date
 }
@@ -43,6 +46,7 @@ type Driver{
     _id:ID
     Name:String
     Username:String
+    Contact:String
     On_Delivery:Boolean
     Password:String
     createdAt:Date
@@ -59,20 +63,17 @@ type Admin{
 
 type Deliveries{
     _id:ID
-    Courier_Name:String
-    On_Delivery:Boolean
-    Pickup_Made:Boolean
-    Completed:Boolean
     Parcel_Type:String
     Parcel_Description:String
-    Pickup_Address:String
-    Sender_Name:String
-    Sender_Contact:String
+    Pickup_Addess:String
+    Username:String
     Recepient_Name:String
     Recepient_Contact:String
-    Recepient_Region:String
-    Recepient_City:String
     Dropoff_Address:String
+    Driver:String
+    Pickup_Made:String
+    On_Delivery:Boolean
+    Completed:Boolean
     createdAt:Date
     updatedAt:Date
 }
@@ -80,133 +81,133 @@ type Deliveries{
 type Mutation{
    Assign_Driver (name:String!,_id:ID!): Deliveries
 
-   Delivery_Complete (status:Boolean!,_id:ID!): Deliveries
+   Completed(status:Boolean!,_id:ID!): Deliveries
 
-   On_Delivery(status:Boolean!,_id:ID!): Deliveries
+   Delivering(status:Boolean!,_id:ID!): Deliveries
 
-   Pickup_Made(status:Boolean!,_id:ID!): Deliveries
+   Pickedup(status:Boolean!,_id:ID!): Deliveries
 
-   Moving_Driver(status:Boolean!,_id:ID!): Driver
+   Moved(status:Boolean!,_id:ID!): Driver
     
-    Request_Delivery (type:String!,
-     description:String!,
-     address:String!,
-     sname:String!,
-     scontact:String!,
-     rname:String!,
-     rcontact:String!,
-     region:String!,
-     city:String!,
-     dropoff:String!) : Deliveries!
+    Delivery_Request(
+        Parcel_Type:String!
+        Parcel_Description:String!
+        Pickup_Addess:String!
+        Username:String!
+        Recepient_Name:String!
+        Recepient_Contact:String!
+        Dropoff_Address:String!) : Deliveries!
 }`
-
-)
-
 
 const root = {
 
+    Query:{
+
     text:()=>'Hello World!',
 
-    Registered_Users:()=>User_Model.find({},(err,doc)=>{
+    Users:()=>User_Model.find({},(err,doc)=>{
         if(doc) return doc
         else return err
     }),
 
-    Registered_Drivers:()=>Driver_Model.find({},(err,doc)=>{
+    Drivers:()=>Driver_Model.find({},(err,doc)=>{
         if(doc) return doc
         else return err
     }),
 
-    Registered_Admins:()=> Admin_Model.find({},(err,doc)=>{
+    Admins:()=> Admin_Model.find({},(err,doc)=>{
         if(doc) return doc
         else return err
     }),
 
-    Requested_Deliveries:()=> Delivery_Model.find({},(err,doc)=>{
+    Deliveries:()=> Delivery_Model.find({},(err,doc)=>{
         if(doc) return doc
         else return err
     }),
 
-    Assign_Driver:({name,_id})=> Delivery_Model.findByIdAndUpdate({_id:_id},{$set:{Courier_Name:name}},(err,doc)=>{
+    Driver:(parent,{username})=>Driver_Model.findOne({Username:username},(err,doc)=>{
         if(doc) return doc
         else return err
     }),
 
-    Delivery_Complete:({status,_id})=> Delivery_Model.findByIdAndUpdate({_id:_id},{$set:{Completed:status}},(err,doc)=>{
+    Admin:(parent,{username})=>Admin_Model.findOne({Username:username},(err,doc)=>{
         if(doc) return doc
         else return err
     }),
 
-    On_Delivery:({status,_id})=> Delivery_Model.findByIdAndUpdate({_id:_id},{$set:{On_Delivery:status}},(err,doc)=>{
+    User:(parent,{username})=>User_Model.findOne({Username:username},(err,doc)=>{
+        if(doc) return doc
+        else return err
+    }),
+    
+    Find_Delivery:(parent,{username})=> Delivery_Model.find({Username:username},(err,doc)=>{
+        if(doc) return doc
+        else return err
+    }),
+    
+    Available_Delivery:()=> Delivery_Model.find({Driver:'None'},(err,doc)=>{
         if(doc) return doc
         else return err
     }),
 
-    Pickup_Made:({status,_id})=> Delivery_Model.findByIdAndUpdate({_id:_id},{$set:{Pickup_Made:status}},(err,doc)=>{
-        if(doc) return doc
-        else return err
-    }),
-
-    Free_Drivers:()=> Driver_Model.find({On_Delivery:false},(err,doc)=>{
+    Available_Drivers:()=> Driver_Model.find({On_Delivery:false},(err,doc)=>{
         if(doc) return doc
         return err
     }),
 
-    Moving_Driver:({_id,status})=>Driver_Model.findByIdAndUpdate({_id:_id},{$set:{On_Delivery:status}},(err,doc)=>{
+    Customer_Records:(parent,{username})=> Delivery_Model.find({Username:username},(err,doc)=>{
+        if(doc) return doc
+        return err
+    }),
+
+    Driver_Records:(parent,{username})=> Delivery_Model.find({Driver:username},(err,doc)=>{
+        if(doc) return doc
+        return err
+    }),
+},
+
+
+Mutation:{
+            
+    Assign_Driver:(parent,{name,_id})=> Delivery_Model.findByIdAndUpdate({_id:_id},{$set:{Driver:name}},(err,doc)=>{
         if(doc) return doc
         else return err
     }),
 
-    Find_Driver:({username})=>Driver_Model.findOne({Username:username},(err,doc)=>{
+    Completed:(parent,{status,_id})=> Delivery_Model.findByIdAndUpdate({_id:_id},{$set:{Completed:status}},(err,doc)=>{
         if(doc) return doc
         else return err
     }),
 
-    Find_Admin:({username})=>Admin_Model.findOne({Username:username},(err,doc)=>{
+    Delivering:(parent,{status,_id})=> Delivery_Model.findByIdAndUpdate({_id:_id},{$set:{On_Delivery:status}},(err,doc)=>{
         if(doc) return doc
         else return err
     }),
 
-    Find_User:({username})=>User_Model.findOne({Username:username},(err,doc)=>{
-        if(doc) return doc
-        else return err
-    }),
-    
-    Find_Delivery:({name})=> Delivery_Model.find({Sender_Name:name},(err,doc)=>{
-        if(doc) return doc
-        else return err
-    }),
-    
-    No_Driver_Assigned_Delivery:()=> Delivery_Model.find({Courier_Name:'Nobody'},(err,doc)=>{
+    Pickedup:(parent,{status,_id})=> Delivery_Model.findByIdAndUpdate({_id:_id},{$set:{Pickup_Made:status}},(err,doc)=>{
         if(doc) return doc
         else return err
     }),
 
-    Request_Delivery:({type,description,address,rname,rcontact,region,city,dropoff,sname,scontact})=>{
-        const file = new Delivery_Model({
-            Parcel_Type: type,
-            Parcel_Description: description,
-            Pickup_Address:address,
-            Sender_Name:sname,
-            Sender_Contact:scontact,
-            Recepient_Name:rname,
-            Recepient_Contact:rcontact,
-            Recepient_Region:region,
-            Recepient_City:city,
-            Dropoff_Address:dropoff
-        })
-        file.save()
-        return file
+    Moved:(parent,{_id,status})=>Driver_Model.findByIdAndUpdate({_id:_id},{$set:{On_Delivery:status}},(err,doc)=>{
+        if(doc) return doc
+        else return err
+    }),
+
+    Delivery_Request:(parent,args)=>{
+        const file = new Delivery_Model(args)
+        return file.save()
     },
-}
+}}
 
-app.use('/graphql',exgraph({
-    schema:Schema,
-    rootValue:root,
-    graphiql:true,
-}))
+const server = new ApolloServer({
+    typeDefs:Schema,
+    resolvers:root,
+    playground:true
+})
 
-app.use(body.json())
+
+server.applyMiddleware({app,bodyParserConfig:true})
 
 //Begining for Login and Signup Routes.....................
 

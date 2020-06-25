@@ -15,7 +15,7 @@ const Admin_Schema = mongo.Schema({
     },
 },{ timestamps: true})
 
-const Admin_Model = mongo.model('Skynet-Administrator',Admin_Schema)
+const Admin_Model = mongo.model('Admin',Admin_Schema)
 
 
 module.exports = { Admin_Model }
